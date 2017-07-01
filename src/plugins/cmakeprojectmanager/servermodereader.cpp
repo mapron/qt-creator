@@ -267,16 +267,17 @@ static void addCMakeVFolder(FolderNode *base, const Utils::FileName &basePath, i
 {
     if (files.size() == 0)
         return;
-    FolderNode *folder = base;
-    if (!displayName.isEmpty()) {
-        auto newFolder = std::make_unique<VirtualFolderNode>(basePath, priority);
-        newFolder->setDisplayName(displayName);
-        folder = newFolder.get();
-        base->addNode(std::move(newFolder));
-    }
-    folder->addNestedNodes(std::move(files));
-    for (FolderNode *fn : folder->folderNodes())
-        fn->compress();
+
+//    FolderNode *folder = base;
+//    if (!displayName.isEmpty()) {
+//        auto newFolder = std::make_unique<VirtualFolderNode>(basePath, priority);
+//        newFolder->setDisplayName(displayName);
+//        folder = newFolder.get();
+//        base->addNode(std::move(newFolder));
+//    }
+    base->addNestedNodes(std::move(files));
+    //for (FolderNode *fn : folder->folderNodes())
+    //    fn->compress();
 }
 
 static std::vector<std::unique_ptr<FileNode>> &&
@@ -297,6 +298,10 @@ static void addCMakeInputs(FolderNode *root,
                            std::vector<std::unique_ptr<FileNode>> &&rootInputs)
 {
     std::unique_ptr<ProjectNode> cmakeVFolder = std::make_unique<CMakeInputsNode>(root->filePath());
+
+   // FolderNode * cmakeVFolder = root;
+   // ProjectNode *cmakeVFolder = new CMakeInputsNode(root->filePath());
+   // root->addNode(cmakeVFolder);
 
     QSet<Utils::FileName> knownFiles;
     root->forEachGenericNode([&knownFiles](const Node *n) {
@@ -343,10 +348,14 @@ void ServerModeReader::generateProjectTree(CMakeProjectNode *root,
     if (topLevel)
         root->setDisplayName(topLevel->name);
 
-    QHash<Utils::FileName, ProjectNode *> cmakeListsNodes
+
+    auto cmakeFilesSourceNames = Utils::transform<QSet>(cmakeFilesSource, &FileNode::filePath);
+
+    QHash<Utils::FileName, ProjectNode *> cmakeListsNodes 
             = addCMakeLists(root, std::move(cmakeLists));
+
     QList<FileNode *> knownHeaders;
-    addProjects(cmakeListsNodes, m_projects, knownHeaders);
+    addProjects(root, cmakeListsNodes, m_projects, cmakeFilesSourceNames, knownHeaders);
 
     addHeaderNodes(root, knownHeaders, allFiles);
 
@@ -354,6 +363,8 @@ void ServerModeReader::generateProjectTree(CMakeProjectNode *root,
         addCMakeInputs(root, m_parameters.sourceDirectory, m_parameters.workDirectory,
                        std::move(cmakeFilesSource), std::move(cmakeFilesBuild),
                        std::move(cmakeFilesOther));
+
+    root->compress();
 }
 
 CppTools::RawProjectParts ServerModeReader::createRawProjectParts() const
@@ -792,7 +803,7 @@ ServerModeReader::addCMakeLists(CMakeProjectNode *root,
 
         return std::make_unique<FolderNode>(fp);
     });
-    root->compress();
+
     return cmakeListsNodes;
 }
 
@@ -814,13 +825,15 @@ static void createProjectNode(const QHash<Utils::FileName, ProjectNode *> &cmake
     pn->setDisplayName(displayName);
 }
 
-void ServerModeReader::addProjects(const QHash<Utils::FileName, ProjectNode *> &cmakeListsNodes,
+void ServerModeReader::addProjects(CMakeProjectNode *root, const QHash<Utils::FileName, ProjectNode *> &cmakeListsNodes,
                                    const QList<Project *> &projects,
+                                   const QSet<Utils::FileName> &cmakeFilesSourceNames,
                                    QList<FileNode *> &knownHeaderNodes)
 {
     for (const Project *p : projects) {
-        createProjectNode(cmakeListsNodes, p->sourceDirectory, p->name);
-        addTargets(cmakeListsNodes, p->targets, knownHeaderNodes);
+        //createProjectNode(cmakeListsNodes, p->sourceDirectory, p->name);
+        //addTargets(cmakeListsNodes, p->targets, knownHeaderNodes);
+        addTargets(root, cmakeListsNodes, p->targets, cmakeFilesSourceNames, knownHeaderNodes);
     }
 }
 
@@ -844,11 +857,13 @@ static CMakeTargetNode *createTargetNode(const QHash<Utils::FileName, ProjectNod
     return tn;
 }
 
-void ServerModeReader::addTargets(const QHash<Utils::FileName, ProjectExplorer::ProjectNode *> &cmakeListsNodes,
+void ServerModeReader::addTargets(CMakeProjectNode *root, const QHash<Utils::FileName, ProjectExplorer::ProjectNode *> &cmakeListsNodes,
                                   const QList<Target *> &targets,
+                                  const QSet<Utils::FileName> &cmakeFilesSourceNames,
                                   QList<ProjectExplorer::FileNode *> &knownHeaderNodes)
 {
     for (const Target *t : targets) {
+        /*
         CMakeTargetNode *tNode = createTargetNode(cmakeListsNodes, t->sourceDirectory, t->name);
         QTC_ASSERT(tNode, qDebug() << "No target node for" << t->sourceDirectory << t->name; continue);
         tNode->setTargetInformation(t->artifacts, t->type);
@@ -882,7 +897,8 @@ void ServerModeReader::addTargets(const QHash<Utils::FileName, ProjectExplorer::
             }
         }
         tNode->setLocationInfo(info);
-        addFileGroups(tNode, t->sourceDirectory, t->buildDirectory, t->fileGroups, knownHeaderNodes);
+        */
+        addFileGroups(root, t->sourceDirectory, t->buildDirectory, t->fileGroups, cmakeFilesSourceNames, knownHeaderNodes);
     }
 }
 
@@ -890,6 +906,7 @@ void ServerModeReader::addFileGroups(ProjectNode *targetRoot,
                                      const Utils::FileName &sourceDirectory,
                                      const Utils::FileName &buildDirectory,
                                      const QList<ServerModeReader::FileGroup *> &fileGroups,
+                                     const QSet<Utils::FileName> &cmakeFilesSourceNames,
                                      QList<FileNode *> &knownHeaderNodes)
 {
     std::vector<std::unique_ptr<FileNode>> toList;
@@ -900,7 +917,10 @@ void ServerModeReader::addFileGroups(ProjectNode *targetRoot,
     });
 
     for (const FileGroup *f : fileGroups) {
-        const QList<FileName> newSources = Utils::filtered(f->sources, [&alreadyListed](const Utils::FileName &fn) {
+        const QList<FileName> newSources = Utils::filtered(f->sources, [&alreadyListed, &cmakeFilesSourceNames](const Utils::FileName &fn) {
+            if (cmakeFilesSourceNames.contains(fn))
+                return false;
+
             const int count = alreadyListed.count();
             alreadyListed.insert(fn);
             return count != alreadyListed.count();
