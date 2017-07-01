@@ -247,15 +247,8 @@ static void addCMakeVFolder(FolderNode *base, const Utils::FileName &basePath, i
 {
     if (files.isEmpty())
         return;
-    FolderNode *folder = base;
-    if (!displayName.isEmpty()) {
-        folder = new VirtualFolderNode(basePath, priority);
-        folder->setDisplayName(displayName);
-        base->addNode(folder);
-    }
-    folder->addNestedNodes(files);
-    for (FolderNode *fn : folder->folderNodes())
-        fn->compress();
+
+    base->addNestedNodes(files);
 }
 
 static QList<FileNode *> removeKnownNodes(const QSet<Utils::FileName> &knownFiles, const QList<FileNode *> &files)
@@ -276,8 +269,9 @@ static void addCMakeInputs(FolderNode *root,
                            QList<FileNode *> &buildInputs,
                            QList<FileNode *> &rootInputs)
 {
-    ProjectNode *cmakeVFolder = new CMakeInputsNode(root->filePath());
-    root->addNode(cmakeVFolder);
+    FolderNode * cmakeVFolder = root;
+   // ProjectNode *cmakeVFolder = new CMakeInputsNode(root->filePath());
+   // root->addNode(cmakeVFolder);
 
     QSet<Utils::FileName> knownFiles;
     root->forEachGenericNode([&knownFiles](const Node *n) {
@@ -324,7 +318,7 @@ void ServerModeReader::generateProjectTree(CMakeProjectNode *root,
 
     QHash<Utils::FileName, ProjectNode *> cmakeListsNodes = addCMakeLists(root, cmakeLists);
     QList<FileNode *> knownHeaders;
-    addProjects(cmakeListsNodes, m_projects, knownHeaders);
+    addProjects(root, cmakeListsNodes, m_projects, knownHeaders);
 
     addHeaderNodes(root, knownHeaders, allFiles);
 
@@ -687,14 +681,14 @@ static ProjectNode *createProjectNode(const QHash<Utils::FileName, ProjectNode *
     return pn;
 }
 
-void ServerModeReader::addProjects(const QHash<Utils::FileName, ProjectNode *> &cmakeListsNodes,
+void ServerModeReader::addProjects(CMakeProjectNode *root, const QHash<Utils::FileName, ProjectNode *> &cmakeListsNodes,
                                    const QList<Project *> &projects,
                                    QList<FileNode *> &knownHeaderNodes)
 {
     for (const Project *p : projects) {
         ProjectNode *pNode = createProjectNode(cmakeListsNodes, p->sourceDirectory, p->name);
         QTC_ASSERT(pNode, qDebug() << p->sourceDirectory.toUserOutput() ; continue);
-        addTargets(cmakeListsNodes, p->targets, knownHeaderNodes);
+        addTargets(root, cmakeListsNodes, p->targets, knownHeaderNodes);
     }
 }
 
@@ -717,15 +711,15 @@ static CMakeTargetNode *createTargetNode(const QHash<Utils::FileName, ProjectNod
     return tn;
 }
 
-void ServerModeReader::addTargets(const QHash<Utils::FileName, ProjectExplorer::ProjectNode *> &cmakeListsNodes,
+void ServerModeReader::addTargets(CMakeProjectNode *root, const QHash<Utils::FileName, ProjectExplorer::ProjectNode *> &cmakeListsNodes,
                                   const QList<Target *> &targets,
                                   QList<ProjectExplorer::FileNode *> &knownHeaderNodes)
 {
     for (const Target *t : targets) {
-        CMakeTargetNode *tNode = createTargetNode(cmakeListsNodes, t->sourceDirectory, t->name);
-        QTC_ASSERT(tNode, qDebug() << "No target node for" << t->sourceDirectory << t->name; continue);
-        tNode->setTargetInformation(t->artifacts, t->type);
-        addFileGroups(tNode, t->sourceDirectory, t->buildDirectory, t->fileGroups, knownHeaderNodes);
+        //CMakeTargetNode *tNode = createTargetNode(cmakeListsNodes, t->sourceDirectory, t->name);
+        //QTC_ASSERT(tNode, qDebug() << "No target node for" << t->sourceDirectory << t->name; continue);
+        //tNode->setTargetInformation(t->artifacts, t->type);
+        addFileGroups(root, t->sourceDirectory, t->buildDirectory, t->fileGroups, knownHeaderNodes);
     }
 }
 

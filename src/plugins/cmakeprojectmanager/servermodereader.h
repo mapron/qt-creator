@@ -122,10 +122,10 @@ private:
 
     QHash<Utils::FileName, ProjectExplorer::ProjectNode *>
     addCMakeLists(CMakeProjectNode *root, const QList<ProjectExplorer::FileNode *> &cmakeLists);
-    void addProjects(const QHash<Utils::FileName, ProjectExplorer::ProjectNode *> &cmakeListsNodes,
+    void addProjects(CMakeProjectNode *root, const QHash<Utils::FileName, ProjectExplorer::ProjectNode *> &cmakeListsNodes,
                      const QList<Project *> &projects,
                      QList<ProjectExplorer::FileNode *> &knownHeaderNodes);
-    void addTargets(const QHash<Utils::FileName, ProjectExplorer::ProjectNode *> &cmakeListsNodes,
+    void addTargets(CMakeProjectNode *root, const QHash<Utils::FileName, ProjectExplorer::ProjectNode *> &cmakeListsNodes,
                     const QList<Target *> &targets,
                     QList<ProjectExplorer::FileNode *> &knownHeaderNodes);
     void addFileGroups(ProjectExplorer::ProjectNode *targetRoot,
