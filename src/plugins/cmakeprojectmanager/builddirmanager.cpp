@@ -47,6 +47,7 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSet>
+#include <QDir>
 
 using namespace ProjectExplorer;
 
@@ -72,14 +73,17 @@ BuildDirManager::~BuildDirManager() = default;
 const Utils::FileName BuildDirManager::workDirectory() const
 {
     const Utils::FileName bdir = m_buildConfiguration->buildDirectory();
-    if (bdir.exists())
-        return bdir;
-    if (!m_tempDir) {
-        m_tempDir.reset(new Utils::TemporaryDirectory("qtc-cmake-XXXXXXXX"));
-        if (!m_tempDir->isValid())
-            emitErrorOccured(tr("Failed to create temporary directory \"%1\".").arg(m_tempDir->path()));
-    }
-    return Utils::FileName::fromString(m_tempDir->path());
+    if (!bdir.exists())
+        QDir(bdir.toString()).mkpath(bdir.toString());
+
+    return bdir;
+
+//    if (!m_tempDir) {
+//        m_tempDir.reset(new Utils::TemporaryDirectory("qtc-cmake-XXXXXXXX"));
+//        if (!m_tempDir->isValid())
+//            emitErrorOccured(tr("Failed to create temporary directory \"%1\".").arg(m_tempDir->path()));
+//    }
+//    return Utils::FileName::fromString(m_tempDir->path());
 }
 
 void BuildDirManager::emitDataAvailable()
