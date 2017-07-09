@@ -308,6 +308,8 @@ void ServerModeReader::generateProjectTree(CMakeProjectNode *root,
     QList<FileNode *> knownHeaders;
     addProjects(root, cmakeListsNodes, m_projects, knownHeaders);
 
+    root->compress();
+
     addHeaderNodes(root, knownHeaders, allFiles);
 }
 
@@ -634,7 +636,7 @@ ServerModeReader::addCMakeLists(CMakeProjectNode *root, const QList<FileNode *> 
         }
         return fn;
     });
-    root->compress();
+
     return cmakeListsNodes;
 }
 
@@ -661,8 +663,8 @@ void ServerModeReader::addProjects(CMakeProjectNode *root, const QHash<Utils::Fi
                                    QList<FileNode *> &knownHeaderNodes)
 {
     for (const Project *p : projects) {
-        ProjectNode *pNode = createProjectNode(cmakeListsNodes, p->sourceDirectory, p->name);
-        QTC_ASSERT(pNode, qDebug() << p->sourceDirectory.toUserOutput() ; continue);
+        //ProjectNode *pNode = createProjectNode(cmakeListsNodes, p->sourceDirectory, p->name);
+        //QTC_ASSERT(pNode, qDebug() << p->sourceDirectory.toUserOutput() ; continue);
         addTargets(root, cmakeListsNodes, p->targets, knownHeaderNodes);
     }
 }
