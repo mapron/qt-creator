@@ -12,7 +12,7 @@ QtcProduct {
     property var pluginRecommends: []
     property var pluginTestDepends: []
 
-    targetName: QtcFunctions.qtLibraryName(qbs, name)
+    targetName: QtcFunctions.qtLibraryName(qbs, name) + "4"
     destinationDirectory: FileInfo.joinPaths(project.buildDirectory, qtc.ide_plugin_path)
 
     Depends { name: "ExtensionSystem" }
