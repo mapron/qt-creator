@@ -11,7 +11,7 @@ QtcProduct {
         name: "Qt.testlib"
     }
 
-    targetName: QtcFunctions.qtLibraryName(qbs, name)
+    targetName: QtcFunctions.qtLibraryName(qbs, name)+ "4"
     destinationDirectory: qtc.ide_library_path
 
     cpp.linkerFlags: {

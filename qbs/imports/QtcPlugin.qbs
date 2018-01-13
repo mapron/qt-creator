@@ -15,7 +15,7 @@ QtcProduct {
     property string minimumQtVersion: "5.6.2"
     condition: QtcFunctions.versionIsAtLeast(Qt.core.version, minimumQtVersion)
 
-    targetName: QtcFunctions.qtLibraryName(qbs, name)
+    targetName: QtcFunctions.qtLibraryName(qbs, name) + "4"
     destinationDirectory: qtc.ide_plugin_path
 
     Depends { name: "ExtensionSystem" }
