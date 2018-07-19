@@ -309,15 +309,15 @@ static void addCMakeInputs(FolderNode *root,
             knownFiles.insert(n->filePath());
     });
 
-    addCMakeVFolder(cmakeVFolder.get(), sourceDir, 1000, QString(), removeKnownNodes(knownFiles, std::move(sourceInputs)));
-    addCMakeVFolder(cmakeVFolder.get(), buildDir, 100,
+    addCMakeVFolder(root, sourceDir, 1000, QString(), removeKnownNodes(knownFiles, std::move(sourceInputs)));
+    addCMakeVFolder(root, buildDir, 100,
                     QCoreApplication::translate("CMakeProjectManager::Internal::ServerModeReader", "<Build Directory>"),
                     removeKnownNodes(knownFiles, std::move(buildInputs)));
-    addCMakeVFolder(cmakeVFolder.get(), Utils::FileName(), 10,
+    addCMakeVFolder(root, Utils::FileName(), 10,
                     QCoreApplication::translate("CMakeProjectManager::Internal::ServerModeReader", "<Other Locations>"),
                     removeKnownNodes(knownFiles, std::move(rootInputs)));
 
-    root->addNode(std::move(cmakeVFolder));
+    //root->addNode(std::move(cmakeVFolder));
 }
 
 void ServerModeReader::generateProjectTree(CMakeProjectNode *root,
@@ -351,7 +351,7 @@ void ServerModeReader::generateProjectTree(CMakeProjectNode *root,
 
     auto cmakeFilesSourceNames = Utils::transform<QSet>(cmakeFilesSource, &FileNode::filePath);
 
-    QHash<Utils::FileName, ProjectNode *> cmakeListsNodes 
+    QHash<Utils::FileName, ProjectNode *> cmakeListsNodes
             = addCMakeLists(root, std::move(cmakeLists));
 
     QList<FileNode *> knownHeaders;
